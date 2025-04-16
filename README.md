@@ -12,7 +12,7 @@ Dự án này là một ứng dụng web Flask để thực hiện phân loại 
 
 ## Cài đặt và Sử dụng
 
-### Sử dụng Docker (Khuyến nghị)
+### Sử dụng Docker
 
 ```bash
 # Kéo image từ Docker Hub
@@ -91,6 +91,3 @@ Dự án sử dụng GitLab CI/CD để tự động hóa quy trình phát tri�
 3. Build Docker image
 4. Đẩy image lên Docker Hub
 
-## License
-
-Dự án này được phân phối dưới [MIT License](LICENSE).
