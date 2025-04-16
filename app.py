@@ -135,6 +135,19 @@ def predict_api():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/model_info', methods=['GET'])
+def model_info_api():
+    """API trả thông tin mô hình tốt nhất theo định dạng UI yêu cầu"""
+    model_info = load_model_info()
+    if model_info:
+        return jsonify({
+            "run_id": model_info.get('timestamp', 'N/A'),
+            "parameters": model_info.get('best_params', {}),
+            "metrics": {"accuracy": model_info.get('accuracy', 0.0)}
+        })
+    else:
+        return jsonify({"error": "Chưa có mô hình nào được huấn luyện!"}), 404
+
 
 if __name__ == '__main__':
     app.run(debug=True)

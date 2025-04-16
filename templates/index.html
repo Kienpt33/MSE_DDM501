@@ -1,141 +1,83 @@
-<!doctype html>
-<html lang="vi">
+<!DOCTYPE html>
+<html>
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Ứng dụng Phân loại</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Classification Model</title>
     <style>
-        .prediction-box {
-            font-size: 1.5rem;
-            text-align: center;
-            padding: 20px;
-            border-radius: 5px;
-            margin: 20px 0;
-            font-weight: bold;
-        }
-        .prediction-0 {
-            background-color: #cce5ff;
-            color: #004085;
-        }
-        .prediction-1 {
-            background-color: #d4edda;
-            color: #155724;
-        }
-        .info-card {
-            margin-bottom: 20px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        .code-example {
-            background-color: #f8f9fa;
-            padding: 10px;
-            border-radius: 4px;
-            font-family: monospace;
-        }
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .result { margin-top: 20px; padding: 10px; border: 1px solid #ddd; }
+        button { padding: 10px; background: #4CAF50; color: white; border: none; cursor: pointer; }
+        input { padding: 8px; margin: 5px; width: 100%; }
+        h3, h4 { margin-bottom: 5px; }
     </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <div class="row">
-            <div class="col-md-8 offset-md-2">
-                <h2 class="mb-4 text-center">Hệ thống Dự đoán Phân loại</h2>
+    <div class="container">
+        <h1>Classification Model Prediction</h1>
 
-                <!-- Thông tin mô hình -->
-                <div class="card info-card">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">Thông tin Mô hình</h5>
-                    </div>
-                    <div class="card-body">
-                        {% if model_info %}
-                            <p><strong>Mô hình tốt nhất:</strong> {{ model_info.model_name }}</p>
-                            <p><strong>Độ chính xác:</strong> {{ "%.4f"|format(model_info.accuracy) }}</p>
-                            <p><strong>Tham số tốt nhất:</strong></p>
-                            <pre class="code-example">{{ model_info.best_params }}</pre>
-                            <p><strong>Thời gian huấn luyện:</strong> {{ model_info.timestamp }}</p>
-                        {% else %}
-                            <div class="alert alert-warning">
-                                Chưa có mô hình nào được huấn luyện. Vui lòng chạy script train_model.py trước.
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
+        <h2>Model Information</h2>
+        <button onclick="getModelInfo()">Get Model Info</button>
+        <div id="modelInfo" class="result"></div>
 
-                <!-- Form dự đoán -->
-                <div class="card info-card">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="mb-0">Dự đoán</h5>
-                    </div>
-                    <div class="card-body">
-                        {% if has_model %}
-                            <form method="post">
-                                <div class="mb-3">
-                                    <label for="features" class="form-label">Nhập {{ n_features }} đặc trưng, cách nhau bởi dấu phẩy:</label>
-                                    <input type="text" class="form-control" id="features" name="features"
-                                           placeholder="Ví dụ: {% for i in range(n_features) %}{% if i > 0 %}, {% endif %}0.{{ i + 1 }}{% endfor %}" required>
-                                    <div class="form-text">Nhập {{ n_features }} số thực, cách nhau bởi dấu phẩy.</div>
-                                </div>
-                                <div class="d-grid">
-                                    <button type="submit" class="btn btn-success">Dự đoán</button>
-                                </div>
-                            </form>
+        <h2>Make a Prediction</h2>
+        <p>Enter feature values (comma-separated):</p>
+        <input type="text" id="features" placeholder="e.g., 0.1, 0.2, 0.3, ...">
+        <button onclick="predict()">Predict</button>
 
-                            {% if error %}
-                                <div class="alert alert-danger mt-3">
-                                    {{ error }}
-                                </div>
-                            {% endif %}
-
-                            {% if prediction is not none %}
-                                <div class="prediction-box prediction-{{ prediction }}">
-                                    Kết quả dự đoán: Lớp {{ prediction }}
-                                </div>
-                            {% endif %}
-                        {% else %}
-                            <div class="alert alert-warning">
-                                Chưa có mô hình nào được huấn luyện. Vui lòng chạy script train_model.py trước.
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- API Usage -->
-                <div class="card info-card">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="mb-0">Sử dụng API</h5>
-                    </div>
-                    <div class="card-body">
-                        <p>Bạn có thể sử dụng API để dự đoán:</p>
-                        <pre class="code-example">POST /predict
-Content-Type: application/json
-
-{
-    "features": [{% for i in range(n_features) %}{% if i > 0 %}, {% endif %}0.{{ i + 1 }}{% endfor %}]
-}</pre>
-                        <p>Ví dụ sử dụng curl:</p>
-                        <pre class="code-example">curl -X POST http://localhost:5000/predict \
-    -H "Content-Type: application/json" \
-    -d '{"features": [{% for i in range(n_features) %}{% if i > 0 %}, {% endif %}0.{{ i + 1 }}{% endfor %}]}'</pre>
-                    </div>
-                </div>
-
-                <!-- Giải thích dự án -->
-                <div class="card info-card">
-                    <div class="card-header bg-secondary text-white">
-                        <h5 class="mb-0">Về Dự án</h5>
-                    </div>
-                    <div class="card-body">
-                        <p>Dự án này bao gồm:</p>
-                        <ul>
-                            <li>Tạo dữ liệu tổng hợp từ hàm <code>make_classification</code> của scikit-learn</li>
-                            <li>Huấn luyện nhiều mô hình phân loại với tinh chỉnh siêu tham số</li>
-                            <li>So sánh và lưu mô hình được đánh giá tốt nhất</li>
-                            <li>Web API cho phép dự đoán sử dụng mô hình tốt nhất</li>
-                        </ul>
-                        <p>Để huấn luyện lại mô hình hoặc thử nghiệm với các cấu hình khác, hãy chạy script <code>train_model.py</code>.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <div id="prediction" class="result"></div>
     </div>
+
+    <script>
+        async function getModelInfo() {
+            const response = await fetch('/model_info');
+            const data = await response.json();
+
+            const infoDiv = document.getElementById('modelInfo');
+            if (data.error) {
+                infoDiv.innerHTML = '<p>' + data.error + '</p>';
+                return;
+            }
+
+            infoDiv.innerHTML = '<h3>Run ID: ' + data.run_id + '</h3>';
+
+            infoDiv.innerHTML += '<h4>Parameters:</h4><ul>';
+            for (const [key, value] of Object.entries(data.parameters)) {
+                infoDiv.innerHTML += '<li>' + key + ': ' + value + '</li>';
+            }
+            infoDiv.innerHTML += '</ul>';
+
+            infoDiv.innerHTML += '<h4>Metrics:</h4><ul>';
+            for (const [key, value] of Object.entries(data.metrics)) {
+                infoDiv.innerHTML += '<li>' + key + ': ' + value.toFixed(4) + '</li>';
+            }
+            infoDiv.innerHTML += '</ul>';
+        }
+
+        async function predict() {
+            const featuresInput = document.getElementById('features').value;
+            const features = featuresInput.split(',').map(x => parseFloat(x.trim()));
+
+            const response = await fetch('/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ features })
+            });
+
+            const data = await response.json();
+            const predDiv = document.getElementById('prediction');
+
+            if (data.error) {
+                predDiv.innerHTML = '<p>' + data.error + '</p>';
+                return;
+            }
+
+            predDiv.innerHTML = '<h3>Prediction: ' + data.prediction + '</h3>';
+            if (data.probabilities) {
+                predDiv.innerHTML += '<h4>Probability:</h4>';
+                predDiv.innerHTML += '<p>Class 0: ' + (data.probabilities[0] * 100).toFixed(2) + '%</p>';
+                predDiv.innerHTML += '<p>Class 1: ' + (data.probabilities[1] * 100).toFixed(2) + '%</p>';
+            }
+        }
+    </script>
 </body>
 </html>
