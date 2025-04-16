@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ứng dụng Phân loại</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .prediction-box {
+            font-size: 1.5rem;
+            text-align: center;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .prediction-0 {
+            background-color: #cce5ff;
+            color: #004085;
+        }
+        .prediction-1 {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .info-card {
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .code-example {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-md-8 offset-md-2">
+                <h2 class="mb-4 text-center">Hệ thống Dự đoán Phân loại</h2>
+
+                <!-- Thông tin mô hình -->
+                <div class="card info-card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Thông tin Mô hình</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if model_info %}
+                            <p><strong>Mô hình tốt nhất:</strong> {{ model_info.model_name }}</p>
+                            <p><strong>Độ chính xác:</strong> {{ "%.4f"|format(model_info.accuracy) }}</p>
+                            <p><strong>Tham số tốt nhất:</strong></p>
+                            <pre class="code-example">{{ model_info.best_params }}</pre>
+                            <p><strong>Thời gian huấn luyện:</strong> {{ model_info.timestamp }}</p>
+                        {% else %}
+                            <div class="alert alert-warning">
+                                Chưa có mô hình nào được huấn luyện. Vui lòng chạy script train_model.py trước.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Form dự đoán -->
+                <div class="card info-card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">Dự đoán</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if has_model %}
+                            <form method="post">
+                                <div class="mb-3">
+                                    <label for="features" class="form-label">Nhập {{ n_features }} đặc trưng, cách nhau bởi dấu phẩy:</label>
+                                    <input type="text" class="form-control" id="features" name="features"
+                                           placeholder="Ví dụ: {% for i in range(n_features) %}{% if i > 0 %}, {% endif %}0.{{ i + 1 }}{% endfor %}" required>
+                                    <div class="form-text">Nhập {{ n_features }} số thực, cách nhau bởi dấu phẩy.</div>
+                                </div>
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-success">Dự đoán</button>
+                                </div>
+                            </form>
+
+                            {% if error %}
+                                <div class="alert alert-danger mt-3">
+                                    {{ error }}
+                                </div>
+                            {% endif %}
+
+                            {% if prediction is not none %}
+                                <div class="prediction-box prediction-{{ prediction }}">
+                                    Kết quả dự đoán: Lớp {{ prediction }}
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <div class="alert alert-warning">
+                                Chưa có mô hình nào được huấn luyện. Vui lòng chạy script train_model.py trước.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- API Usage -->
+                <div class="card info-card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">Sử dụng API</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Bạn có thể sử dụng API để dự đoán:</p>
+                        <pre class="code-example">POST /predict
+Content-Type: application/json
+
+{
+    "features": [{% for i in range(n_features) %}{% if i > 0 %}, {% endif %}0.{{ i + 1 }}{% endfor %}]
+}</pre>
+                        <p>Ví dụ sử dụng curl:</p>
+                        <pre class="code-example">curl -X POST http://localhost:5000/predict \
+    -H "Content-Type: application/json" \
+    -d '{"features": [{% for i in range(n_features) %}{% if i > 0 %}, {% endif %}0.{{ i + 1 }}{% endfor %}]}'</pre>
+                    </div>
+                </div>
+
+                <!-- Giải thích dự án -->
+                <div class="card info-card">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">Về Dự án</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Dự án này bao gồm:</p>
+                        <ul>
+                            <li>Tạo dữ liệu tổng hợp từ hàm <code>make_classification</code> của scikit-learn</li>
+                            <li>Huấn luyện nhiều mô hình phân loại với tinh chỉnh siêu tham số</li>
+                            <li>So sánh và lưu mô hình được đánh giá tốt nhất</li>
+                            <li>Web API cho phép dự đoán sử dụng mô hình tốt nhất</li>
+                        </ul>
+                        <p>Để huấn luyện lại mô hình hoặc thử nghiệm với các cấu hình khác, hãy chạy script <code>train_model.py</code>.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
