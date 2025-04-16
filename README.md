@@ -16,10 +16,10 @@ Dự án này là một ứng dụng web Flask để thực hiện phân loại 
 
 ```bash
 # Kéo image từ Docker Hub
-docker pull your-dockerhub-username/mse_dm501:latest
+docker pull --platform linux/amd64 kien24mse/mse_ddm-image
 
 # Chạy container
-docker run -d -p 5000:5000 --name mse_app your-dockerhub-username/mse_dm501:latest
+docker run -p 5000:5000 kien24mse/mse_ddm-image
 
 # Truy cập ứng dụng tại http://localhost:5000
 ```
@@ -28,7 +28,7 @@ docker run -d -p 5000:5000 --name mse_app your-dockerhub-username/mse_dm501:late
 
 1. Clone repository:
 ```bash
-git clone https://gitlab.com/your-username/MSE_ĐM501.git
+git clone https://github.com/Kienpt33/MSE_DDM501
 cd MSE_ĐM501
 ```
 
@@ -44,7 +44,7 @@ python train_model.py
 
 4. Khởi động ứng dụng Flask:
 ```bash
-flask run
+python app.py
 ```
 
 5. Truy cập ứng dụng tại http://localhost:5000
