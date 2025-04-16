@@ -29,7 +29,7 @@ docker run -p 5000:5000 kien24mse/mse_ddm-image
 1. Clone repository:
 ```bash
 git clone https://github.com/Kienpt33/MSE_DDM501
-cd MSE_ĐM501
+cd MSE_DDM501
 ```
 
 2. Cài đặt các thư viện cần thiết:
