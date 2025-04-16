@@ -1,4 +1,4 @@
-# app.py - Ứng dụng Flask
+# app.py - Flask Application
 from flask import Flask, request, render_template, jsonify
 import joblib
 import numpy as np
@@ -7,7 +7,7 @@ import json
 
 app = Flask(__name__)
 
-# Đường dẫn đến mô hình và thông tin
+# Paths to model and data info
 MODEL_DIR = 'models'
 DATA_DIR = 'data'
 BEST_MODEL_PATH = os.path.join(MODEL_DIR, 'best_model.pkl')
@@ -15,7 +15,7 @@ MODEL_INFO_PATH = os.path.join(MODEL_DIR, 'model_info.json')
 
 
 def load_model_info():
-    """Tải thông tin về mô hình tốt nhất"""
+    """Load information about the best model"""
     if os.path.exists(MODEL_INFO_PATH):
         try:
             with open(MODEL_INFO_PATH, 'r') as f:
@@ -26,16 +26,16 @@ def load_model_info():
 
 
 def get_feature_count():
-    """Lấy số lượng đặc trưng từ file thông tin dữ liệu gần nhất"""
+    """Get the number of features from the most recent data info file"""
     if not os.path.exists(DATA_DIR):
-        return 5  # Giá trị mặc định nếu không tìm thấy thông tin
+        return 5  # Default value if data info is not found
 
-    # Tìm file thông tin dữ liệu gần nhất
+    # Find the latest data info file
     data_info_files = [f for f in os.listdir(DATA_DIR) if f.startswith('data_info_') and f.endswith('.json')]
     if not data_info_files:
         return 5
 
-    # Sắp xếp theo thời gian và lấy file mới nhất
+    # Sort by time and get the latest file
     latest_file = sorted(data_info_files)[-1]
 
     try:
@@ -48,44 +48,43 @@ def get_feature_count():
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    """Trang chủ ứng dụng"""
+    """Homepage of the application"""
     prediction = None
     error = None
     model_info = load_model_info()
 
-    # Kiểm tra xem đã có mô hình tốt nhất chưa
+    # Check if the best model exists
     has_model = os.path.exists(BEST_MODEL_PATH)
 
-    # Xử lý form dự đoán
+    # Handle prediction form
     if request.method == 'POST':
         try:
-            # Kiểm tra xem đã có mô hình tốt nhất chưa
             if not has_model:
-                error = "Chưa có mô hình được huấn luyện. Vui lòng chạy script train_model.py trước."
+                error = "No trained model found. Please run train_model.py first."
             else:
-                # Tải mô hình
+                # Load model
                 model = joblib.load(BEST_MODEL_PATH)
 
-                # Lấy dữ liệu từ form
+                # Get input from form
                 raw_input = request.form.get('features', '')
                 input_data = [float(x.strip()) for x in raw_input.split(',')]
 
-                # Kiểm tra số lượng đặc trưng
+                # Check feature count
                 n_features = get_feature_count()
                 if len(input_data) != n_features:
-                    error = f"Cần nhập đúng {n_features} đặc trưng, cách nhau bởi dấu phẩy"
+                    error = f"Expected {n_features} features, separated by commas."
                 else:
-                    # Dự đoán
+                    # Make prediction
                     input_array = np.array(input_data).reshape(1, -1)
                     prediction = int(model.predict(input_array)[0])
 
-                    # Nếu mô hình hỗ trợ predict_proba, lấy xác suất
+                    # If model supports predict_proba, get probabilities
                     proba = None
                     if hasattr(model, 'predict_proba'):
                         proba = model.predict_proba(input_array)[0]
                         proba = {i: float(p) for i, p in enumerate(proba)}
         except Exception as e:
-            error = f"Lỗi: {str(e)}"
+            error = f"Error: {str(e)}"
 
     return render_template('index.html',
                            prediction=prediction,
@@ -97,33 +96,26 @@ def index():
 
 @app.route('/predict', methods=['POST'])
 def predict_api():
-    """API dự đoán"""
+    """Prediction API"""
     try:
-        # Kiểm tra xem đã có mô hình tốt nhất chưa
         if not os.path.exists(BEST_MODEL_PATH):
-            return jsonify({'error': 'Chưa có mô hình được huấn luyện!'}), 400
+            return jsonify({'error': 'No trained model found!'}), 400
 
-        # Tải mô hình
         model = joblib.load(BEST_MODEL_PATH)
 
-        # Lấy dữ liệu
         data = request.get_json()
         features = data.get('features')
 
-        # Kiểm tra dữ liệu
         if not features or not isinstance(features, list):
-            return jsonify({'error': 'Vui lòng gửi dữ liệu dạng list!'}), 400
+            return jsonify({'error': 'Please send data as a list!'}), 400
 
-        # Kiểm tra số lượng đặc trưng
         n_features = get_feature_count()
         if len(features) != n_features:
-            return jsonify({'error': f'Cần nhập đúng {n_features} đặc trưng!'}), 400
+            return jsonify({'error': f'Expected {n_features} features!'}), 400
 
-        # Dự đoán
         input_array = np.array(features).reshape(1, -1)
         prediction = int(model.predict(input_array)[0])
 
-        # Nếu mô hình hỗ trợ predict_proba, lấy xác suất
         proba = None
         if hasattr(model, 'predict_proba'):
             proba = model.predict_proba(input_array)[0].tolist()
@@ -135,18 +127,20 @@ def predict_api():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
 @app.route('/model_info', methods=['GET'])
 def model_info_api():
-    """API trả thông tin mô hình tốt nhất theo định dạng UI yêu cầu"""
+    """API to return best model info in UI-friendly format"""
     model_info = load_model_info()
     if model_info:
         return jsonify({
             "run_id": model_info.get('timestamp', 'N/A'),
+            "model_name": model_info.get('model_name', 'N/A'),
             "parameters": model_info.get('best_params', {}),
             "metrics": {"accuracy": model_info.get('accuracy', 0.0)}
         })
     else:
-        return jsonify({"error": "Chưa có mô hình nào được huấn luyện!"}), 404
+        return jsonify({"error": "No model has been trained yet!"}), 404
 
 
 if __name__ == '__main__':

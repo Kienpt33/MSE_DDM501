@@ -1,4 +1,4 @@
-# train_model.py - Script huấn luyện và lưu mô hình
+# train_model.py - Model training and saving script
 from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.linear_model import LogisticRegression
@@ -12,13 +12,13 @@ import os
 import json
 from datetime import datetime
 
-# Tạo thư mục lưu trữ nếu chưa tồn tại
+# Create directories if they don't exist
 MODEL_DIR = 'models'
 DATA_DIR = 'data'
 os.makedirs(MODEL_DIR, exist_ok=True)
 os.makedirs(DATA_DIR, exist_ok=True)
 
-# Đường dẫn đến mô hình tốt nhất
+# Paths to best model and model info
 BEST_MODEL_PATH = os.path.join(MODEL_DIR, 'best_model.pkl')
 MODEL_INFO_PATH = os.path.join(MODEL_DIR, 'model_info.json')
 
@@ -26,11 +26,11 @@ MODEL_INFO_PATH = os.path.join(MODEL_DIR, 'model_info.json')
 def generate_data(n_samples=1000, n_features=5, n_informative=3, n_redundant=0,
                   n_classes=2, random_state=42):
     """
-    Tạo dữ liệu tổng hợp sử dụng make_classification và lưu vào file
+    Generate synthetic data using make_classification and save to file
     """
-    print(f"Tạo dữ liệu với {n_samples} mẫu và {n_features} đặc trưng...")
+    print(f"Generating data with {n_samples} samples and {n_features} features...")
 
-    # Tạo dữ liệu
+    # Generate data
     X, y = make_classification(
         n_samples=n_samples,
         n_features=n_features,
@@ -40,19 +40,19 @@ def generate_data(n_samples=1000, n_features=5, n_informative=3, n_redundant=0,
         random_state=random_state
     )
 
-    # Chia dữ liệu thành tập huấn luyện và kiểm tra
+    # Split into train and test sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Tạo DataFrame để lưu
+    # Create DataFrame to save
     df = pd.DataFrame(X, columns=[f'feature_{i}' for i in range(n_features)])
     df['target'] = y
 
-    # Lưu dữ liệu
+    # Save dataset
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     data_path = os.path.join(DATA_DIR, f'dataset_{timestamp}.csv')
     df.to_csv(data_path, index=False)
 
-    # Lưu thông tin về dữ liệu
+    # Save dataset info
     data_info = {
         'n_samples': n_samples,
         'n_features': n_features,
@@ -67,25 +67,33 @@ def generate_data(n_samples=1000, n_features=5, n_informative=3, n_redundant=0,
     with open(os.path.join(DATA_DIR, f'data_info_{timestamp}.json'), 'w') as f:
         json.dump(data_info, f)
 
-    print(f"Đã lưu dữ liệu tại: {data_path}")
+    print(f"Data saved to: {data_path}")
     return X_train, X_test, y_train, y_test, n_features
 
 
 def train_model(model_name, X_train, y_train, X_test, y_test, param_grid=None):
     """
-    Huấn luyện và tinh chỉnh mô hình
+    Train and fine-tune the model
     """
-    print(f"Huấn luyện mô hình {model_name}...")
+    print(f"Training model: {model_name}...")
 
-    # Chọn mô hình dựa trên tên
+    # Select the model based on the name
     if model_name == 'LogisticRegression':
         base_model = LogisticRegression(max_iter=10000)
         if param_grid is None:
-            param_grid = {
-                'C': [0.01, 0.1, 1, 10, 100],
-                'solver': ['liblinear', 'lbfgs'],
-                'penalty': ['l1', 'l2']
-            }
+            # Define valid combinations of solver and penalty
+            param_grid = [
+                {
+                    'penalty': ['l2'],
+                    'C': [0.01, 0.1, 1, 10, 100],
+                    'solver': ['lbfgs']
+                },
+                {
+                    'penalty': ['l1', 'l2'],
+                    'C': [0.01, 0.1, 1, 10, 100],
+                    'solver': ['liblinear']
+                }
+            ]
     elif model_name == 'DecisionTree':
         base_model = DecisionTreeClassifier()
         if param_grid is None:
@@ -103,29 +111,29 @@ def train_model(model_name, X_train, y_train, X_test, y_test, param_grid=None):
                 'min_samples_split': [2, 5]
             }
     else:
-        raise ValueError(f"Mô hình {model_name} không được hỗ trợ")
+        raise ValueError(f"Model '{model_name}' is not supported.")
 
-    # Tinh chỉnh siêu tham số
-    print("Tinh chỉnh siêu tham số...")
+    # Hyperparameter tuning
+    print("Tuning hyperparameters...")
     grid_search = GridSearchCV(base_model, param_grid, cv=5, scoring='accuracy')
     grid_search.fit(X_train, y_train)
 
-    # Lấy mô hình tốt nhất
+    # Get the best model
     best_model = grid_search.best_estimator_
 
-    # Đánh giá mô hình trên tập kiểm tra
+    # Evaluate the model on the test set
     y_pred = best_model.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
 
-    # Tạo báo cáo
+    # Generate evaluation report
     report = classification_report(y_test, y_pred)
     conf_matrix = confusion_matrix(y_test, y_pred)
 
-    print(f"\nĐộ chính xác của {model_name}: {accuracy:.4f}")
-    print(f"\nBáo cáo phân loại:\n{report}")
-    print(f"\nMa trận nhầm lẫn:\n{conf_matrix}")
+    print(f"\nAccuracy of {model_name}: {accuracy:.4f}")
+    print(f"\nClassification Report:\n{report}")
+    print(f"\nConfusion Matrix:\n{conf_matrix}")
 
-    # Lưu thông tin mô hình
+    # Save model info
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     model_info = {
         'model_name': model_name,
@@ -134,19 +142,20 @@ def train_model(model_name, X_train, y_train, X_test, y_test, param_grid=None):
         'timestamp': timestamp
     }
 
-    # Lưu mô hình
+    # Save the model
     model_path = os.path.join(MODEL_DIR, f'{model_name}_{timestamp}.pkl')
     joblib.dump(best_model, model_path)
 
-    print(f"Đã lưu mô hình tại: {model_path}")
+    print(f"Model saved at: {model_path}")
     return best_model, accuracy, model_info, model_path
+
 
 
 def compare_and_save_best_model(model_info):
     """
-    So sánh và lưu mô hình tốt nhất
+    Compare and save the best model
     """
-    # Kiểm tra xem đã có thông tin mô hình tốt nhất chưa
+    # Check if best model info exists
     best_info = None
     if os.path.exists(MODEL_INFO_PATH):
         try:
@@ -155,28 +164,28 @@ def compare_and_save_best_model(model_info):
         except:
             best_info = None
 
-    # Nếu chưa có hoặc mô hình mới tốt hơn
+    # If no existing best model or current model is better
     if best_info is None or model_info['accuracy'] > best_info['accuracy']:
-        # Lưu thông tin mô hình tốt nhất
+        # Save new best model info
         with open(MODEL_INFO_PATH, 'w') as f:
             json.dump(model_info, f)
 
-        # Lưu mô hình tốt nhất
+        # Save new best model
         model_path = os.path.join(MODEL_DIR, f"{model_info['model_name']}_{model_info['timestamp']}.pkl")
         best_model = joblib.load(model_path)
         joblib.dump(best_model, BEST_MODEL_PATH)
 
         print(
-            f"\nMô hình {model_info['model_name']} được chọn là mô hình tốt nhất với độ chính xác {model_info['accuracy']:.4f}")
+            f"\nModel {model_info['model_name']} selected as best model with accuracy {model_info['accuracy']:.4f}")
         return True
     else:
         print(
-            f"\nGiữ nguyên mô hình tốt nhất hiện tại ({best_info['model_name']}) với độ chính xác {best_info['accuracy']:.4f}")
+            f"\nKeeping current best model ({best_info['model_name']}) with accuracy {best_info['accuracy']:.4f}")
         return False
 
 
 def main():
-    # Tạo dữ liệu
+    # Generate data
     X_train, X_test, y_train, y_test, n_features = generate_data(
         n_samples=1000,
         n_features=5,
@@ -185,26 +194,26 @@ def main():
         n_classes=2
     )
 
-    # Các mô hình để thử nghiệm
+    # Models to evaluate
     models = ['LogisticRegression', 'DecisionTree', 'RandomForest']
 
     best_model_updated = False
 
-    # Huấn luyện và đánh giá từng mô hình
+    # Train and evaluate each model
     for model_name in models:
         print(f"\n{'-' * 50}")
         model, accuracy, model_info, _ = train_model(
             model_name, X_train, y_train, X_test, y_test
         )
 
-        # Kiểm tra và cập nhật mô hình tốt nhất
+        # Check and update best model
         if compare_and_save_best_model(model_info):
             best_model_updated = True
 
     if best_model_updated:
-        print("\nĐã cập nhật mô hình tốt nhất.")
+        print("\nBest model has been updated.")
     else:
-        print("\nMô hình tốt nhất không thay đổi.")
+        print("\nBest model remains unchanged.")
 
 
 if __name__ == "__main__":
