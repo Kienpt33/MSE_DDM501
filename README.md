@@ -1,4 +1,4 @@
-# MSE_ĐM501: Hệ thống Phân loại ML với Flask
+# MSE_DDM501: Hệ thống Phân loại ML với Flask
 
 ## Giới thiệu
 
